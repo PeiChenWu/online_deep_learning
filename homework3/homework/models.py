@@ -93,10 +93,11 @@ def save_model(path: str, model: nn.Module):
     torch.save(model.state_dict(), str(path / "model.pt"))
 
 def load_model(model_name: str, with_weights: bool = True, **kwargs):
-    if model_name == "linear":
-        return LinearClassifier()
-    elif model_name == "classifier":
-        return Classifier()
+    if model_name == "classifier":
+        model = Classifier()
+        if with_weights:
+            model.load_state_dict(torch.load("logs/classifier/model.pt", map_location="cpu"))
+        return model
     elif model_name == "detector":
         return Detector()
     else:
