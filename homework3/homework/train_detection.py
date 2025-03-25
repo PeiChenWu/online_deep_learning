@@ -30,10 +30,9 @@ def train(exp_dir="logs", model_name="detector", num_epoch=30, lr=1e-3, batch_si
     seg_loss_fn = torch.nn.CrossEntropyLoss()
     depth_loss_fn = torch.nn.L1Loss()
 
-    train_loader = load_data("drive_data/train", "default", batch_size, shuffle=True)
 
+    train_loader = load_data("drive_data/train", "aug", batch_size, shuffle=True)
     val_loader = load_data("drive_data/val", "default", batch_size)
-
 
     best_miou = 0.0
 
@@ -86,12 +85,16 @@ def train(exp_dir="logs", model_name="detector", num_epoch=30, lr=1e-3, batch_si
             best_miou = val_miou
             save_model(log_dir, model)
 
+            fixed_model_dir = Path(exp_dir) / model_name
+            fixed_model_dir.mkdir(parents=True, exist_ok=True)
+            save_model(fixed_model_dir, model)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_dir", default="logs")
     parser.add_argument("--model_name", default="detector")
-    parser.add_argument("--num_epoch", type=int, default=1)
+    parser.add_argument("--num_epoch", type=int, default=10)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
