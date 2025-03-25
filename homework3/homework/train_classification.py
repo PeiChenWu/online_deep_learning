@@ -64,12 +64,7 @@ def train(exp_dir="logs", model_name="classifier", num_epoch=50, lr=1e-3, batch_
 
         if val_acc > best_acc:
             best_acc = val_acc
-
-            save_model(log_dir, model)
-
-            fixed_model_dir = Path(exp_dir) / model_name
-            fixed_model_dir.mkdir(parents=True, exist_ok=True)
-            save_model(fixed_model_dir, model)
+            save_model(model)
     
 
 

@@ -87,11 +87,7 @@ def train(exp_dir="logs", model_name="detector", num_epoch=30, lr=1e-3, batch_si
 
         if val_miou > best_miou:
             best_miou = val_miou
-            save_model(log_dir, model)
-
-            fixed_model_dir = Path(exp_dir) / model_name
-            fixed_model_dir.mkdir(parents=True, exist_ok=True)
-            save_model(fixed_model_dir, model)
+            save_model(model)
 
 
 if __name__ == "__main__":

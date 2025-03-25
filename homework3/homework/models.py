@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from pathlib import Path
 
 class ClassificationLoss(nn.Module):
     def forward(self, logits: torch.Tensor, target: torch.LongTensor) -> torch.Tensor:
@@ -96,19 +97,31 @@ class Detector(nn.Module):
             seg_preds = torch.argmax(seg_logits, dim=1)
             return seg_preds, depth_pred
 
-def save_model(path: str, model: nn.Module):
-    torch.save(model.state_dict(), str(path / "model.pt"))
+model_factory = {
+    "classifier": Classifier,
+    "detector": Detector,
+    "linear": LinearClassifier
+}
+
+def save_model(model):
+    """
+    Use this function to save your model in train.py
+    """
+    for n, m in model_factory.items():
+        if isinstance(model, m):
+            return torch.save(model.state_dict(), Path(__file__).resolve().parent / f"{n}.th")
+    raise ValueError(f"Model type '{str(type(model))}' not supported")
 
 def load_model(model_name: str, with_weights: bool = True, **kwargs):
     if model_name == "classifier":
         model = Classifier()
         if with_weights:
-            model.load_state_dict(torch.load("logs/classifier/model.pt", map_location="cpu"))
+            model.load_state_dict(torch.load("homework/classifier.th", map_location="cpu"))
         return model
     elif model_name == "detector":
         model = Detector()
         if with_weights:
-            model.load_state_dict(torch.load("logs/detector/model.pt", map_location="cpu"))
+            model.load_state_dict(torch.load("homework/detector.th", map_location="cpu"))
         return model
     else:
         raise ValueError(f"Unknown model name {model_name}")
