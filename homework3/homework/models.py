@@ -88,6 +88,13 @@ class Detector(nn.Module):
         x = self.up2(x)
         x = self.dec2(torch.cat([x, x1], dim=1))
         return self.seg_head(x), self.depth_head(x).squeeze(1)
+        
+    def predict(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        self.eval()
+        with torch.no_grad():
+            seg_logits, depth_pred = self.forward(x)
+            seg_preds = torch.argmax(seg_logits, dim=1)
+            return seg_preds, depth_pred
 
 def save_model(path: str, model: nn.Module):
     torch.save(model.state_dict(), str(path / "model.pt"))
@@ -99,6 +106,9 @@ def load_model(model_name: str, with_weights: bool = True, **kwargs):
             model.load_state_dict(torch.load("logs/classifier/model.pt", map_location="cpu"))
         return model
     elif model_name == "detector":
-        return Detector()
+        model = Detector()
+        if with_weights:
+            model.load_state_dict(torch.load("logs/detector/model.pt", map_location="cpu"))
+        return model
     else:
         raise ValueError(f"Unknown model name {model_name}")
