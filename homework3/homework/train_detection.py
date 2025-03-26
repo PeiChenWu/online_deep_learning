@@ -50,7 +50,7 @@ def train(exp_dir="logs", model_name="detector", num_epoch=30, lr=1e-3, batch_si
             seg_logits, depth_pred = model(image)
             loss_seg = seg_loss_fn(seg_logits, seg)
             loss_depth = depth_loss_fn(depth_pred, depth)
-            loss = loss_seg + loss_depth
+            loss = 1.5*loss_seg + loss_depth
             loss.backward()
             optimizer.step()
 
