@@ -97,11 +97,25 @@ class Detector(nn.Module):
             seg_preds = torch.argmax(seg_logits, dim=1)
             return seg_preds, depth_pred
 
+
+
 model_factory = {
     "classifier": Classifier,
     "detector": Detector,
     "linear": LinearClassifier
 }
+
+
+def calculate_model_size_mb(model: torch.nn.Module) -> float:
+    """
+    Args:
+        model: torch.nn.Module
+
+    Returns:
+        float, size in megabytes
+    """
+    return sum(p.numel() for p in model.parameters()) * 4 / 1024 / 1024
+
 
 def save_model(model):
     """
@@ -112,16 +126,26 @@ def save_model(model):
             return torch.save(model.state_dict(), Path(__file__).resolve().parent / f"{n}.th")
     raise ValueError(f"Model type '{str(type(model))}' not supported")
 
-def load_model(model_name: str, with_weights: bool = True, **kwargs):
-    if model_name == "classifier":
-        model = Classifier()
-        if with_weights:
-            model.load_state_dict(torch.load("homework/classifier.th", map_location="cpu"))
-        return model
-    elif model_name == "detector":
-        model = Detector()
-        if with_weights:
-            model.load_state_dict(torch.load("homework/detector.th", map_location="cpu"))
-        return model
-    else:
-        raise ValueError(f"Unknown model name {model_name}")
+
+def load_model(model_name: str, with_weights: bool = False, **model_kwargs):
+    """
+    Called by the grader to load a pre-trained model by name
+    """
+    r = model_factory[model_name](**model_kwargs)
+    if with_weights:
+        model_path = Path(__file__).resolve().parent / f"{model_name}.th"
+        assert model_path.exists(), f"{model_path.name} not found"
+        try:
+            r.load_state_dict(torch.load(model_path, map_location="cpu"))
+        except RuntimeError as e:
+            raise AssertionError(
+                f"Failed to load {model_path.name}, make sure the default model arguments are set correctly"
+            ) from e
+
+    # Limit model sizes since they will be zipped and submitted
+    model_size_mb = calculate_model_size_mb(r)
+    if model_size_mb > 10:
+        raise AssertionError(f"{model_name} is too large: {model_size_mb:.2f} MB")
+    print(f"Model size: {model_size_mb:.2f} MB")
+
+    return r
