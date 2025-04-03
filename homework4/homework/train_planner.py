@@ -8,6 +8,7 @@ Usage:
     python3 -m homework.train_planner --your_args here
 """
 
+
 import argparse
 from datetime import datetime
 from pathlib import Path
