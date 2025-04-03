@@ -24,6 +24,21 @@ class MLPPlanner(nn.Module):
         self.n_track = n_track
         self.n_waypoints = n_waypoints
 
+
+
+        hidden_dim = 128
+        input_dim = 2 * n_track * 2  # left and right track points (x, y)
+        output_dim = n_waypoints * 2  # waypoints (x, y)
+
+        self.mlp = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+        )
+
     def forward(
         self,
         track_left: torch.Tensor,
@@ -43,7 +58,10 @@ class MLPPlanner(nn.Module):
         Returns:
             torch.Tensor: future waypoints with shape (b, n_waypoints, 2)
         """
-        raise NotImplementedError
+        #raise NotImplementedError
+        x = torch.cat([track_left, track_right], dim=2)  # Concatenate along the feature dimension
+        waypoints = self.mlp(x).view(-1, self.n_waypoints, 2)  # Reshape to (b, n_waypoints, 2)
+        return waypoints
 
 
 class TransformerPlanner(nn.Module):
@@ -60,6 +78,13 @@ class TransformerPlanner(nn.Module):
 
         self.query_embed = nn.Embedding(n_waypoints, d_model)
 
+        nhead = 4
+        num_layers = 2
+
+        self.encoder = nn.Linear(2, d_model)  # Encode (x, y) coordinates
+        self.transformer = nn.Transformer(d_model, nhead, num_layers, num_layers)
+        self.fc_out = nn.Linear(d_model, 2)
+
     def forward(
         self,
         track_left: torch.Tensor,
@@ -79,7 +104,27 @@ class TransformerPlanner(nn.Module):
         Returns:
             torch.Tensor: future waypoints with shape (b, n_waypoints, 2)
         """
-        raise NotImplementedError
+        #raise NotImplementedError
+
+        b, n_track, _ = track_left.shape
+        # Combine left and right track points
+        track = torch.cat([track_left, track_right], dim=1)  # shape (b, 2 * n_track, 2)
+
+        # Encode the track points
+        track = self.encoder(track)  # shape (b, 2 * n_track, d_model)
+
+        # Create waypoint queries
+        query = self.query_embed.weight.unsqueeze(1).repeat(1, b, 1)  # shape (n_waypoints, b, d_model)
+
+        # Use transformer to predict waypoints
+        track = track.permute(1, 0, 2)  # Transformer expects (seq_len, batch, feature)
+        output = self.transformer(query, track)  # shape (n_waypoints, b, d_model)
+
+        # Predict waypoints
+        output = self.fc_out(output)  # shape (n_waypoints, b, 2)
+        waypoints = output.permute(1, 0, 2)  # shape (b, n_waypoints, 2)
+
+        return waypoints
 
 
 class CNNPlanner(torch.nn.Module):
