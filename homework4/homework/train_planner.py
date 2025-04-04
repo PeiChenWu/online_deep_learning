@@ -22,11 +22,12 @@ from homework.models import load_model, save_model
 from homework.datasets.road_dataset import RoadDataset
 #from homework.metrics import calculate_longitudinal_error, calculate_lateral_error
 from homework.metrics import PlannerMetric
+from homework.datasets.road_dataset import load_data
 
-def load_data(split_dir, batch_size=32, shuffle=False, num_workers=2):
-    dataset = RoadDataset(split_dir)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
+#def load_data(split_dir, batch_size=32, shuffle=False, num_workers=2):
+#    dataset = RoadDataset(split_dir)
+#    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
 def train(
     exp_dir="logs",
@@ -51,8 +52,9 @@ def train(
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    train_loader = load_data("drive_data/train", batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = load_data("drive_data/val", batch_size=batch_size, num_workers=num_workers)
+    train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = load_data("drive_data/val", "default", batch_size=batch_size, num_workers=num_workers)
+
 
     best_error = float("inf")
 
