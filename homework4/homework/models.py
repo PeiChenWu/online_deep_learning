@@ -60,8 +60,8 @@ class MLPPlanner(nn.Module):
             torch.Tensor: future waypoints with shape (b, n_waypoints, 2)
         """
         #raise NotImplementedError
-        x = torch.cat([track_left, track_right], dim=2)  # Concatenate along the feature dimension
-        waypoints = self.mlp(x).view(-1, self.n_waypoints, 2)  # Reshape to (b, n_waypoints, 2)
+        x = torch.cat([track_left, track_right], dim=2)  
+        waypoints = self.mlp(x).view(-1, self.n_waypoints, 2)  # reshape to (b, n_waypoints, 2)
         return waypoints
 
 
@@ -82,7 +82,7 @@ class TransformerPlanner(nn.Module):
         nhead = 4
         num_layers = 2
 
-        self.encoder = nn.Linear(2, d_model)  # Encode (x, y) coordinates
+        self.encoder = nn.Linear(2, d_model)  
         self.transformer = nn.Transformer(d_model, nhead, num_layers, num_layers)
         self.fc_out = nn.Linear(d_model, 2)
 
