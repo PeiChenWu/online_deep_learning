@@ -83,7 +83,10 @@ class TransformerPlanner(nn.Module):
         num_layers = 2
 
         self.encoder = nn.Linear(2, d_model)  
-        self.transformer = nn.Transformer(d_model, nhead, num_layers, num_layers)
+        #self.transformer = nn.Transformer(d_model, nhead, num_layers, num_layers)
+        self.transformer_decoder = nn.TransformerDecoder(
+            nn.TransformerDecoderLayer(d_model, nhead), num_layers
+        )
         self.fc_out = nn.Linear(d_model, 2)
 
     def forward(
@@ -115,11 +118,14 @@ class TransformerPlanner(nn.Module):
         track = self.encoder(track)  # shape (b, 2 * n_track, d_model)
 
         # Create waypoint queries
-        query = self.query_embed.weight.unsqueeze(1).repeat(1, b, 1)  # shape (n_waypoints, b, d_model)
-
+        #query = self.query_embed.weight.unsqueeze(1).repeat(1, b, 1)  # shape (n_waypoints, b, d_model)
+        query = self.query_embed.weight.unsqueeze(1).repeat(1, b, 1)  # (n_waypoints, B, d_model)
+        
         # Use transformer to predict waypoints
         track = track.permute(1, 0, 2)  # Transformer expects (seq_len, batch, feature)
-        output = self.transformer(query, track)  # shape (n_waypoints, b, d_model)
+        #output = self.transformer(query, track)  # shape (n_waypoints, b, d_model)
+        output = self.transformer_decoder(query, track)
+
 
         # Predict waypoints
         output = self.fc_out(output)  # shape (n_waypoints, b, 2)
