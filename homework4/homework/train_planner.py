@@ -28,7 +28,18 @@ def load_data(split_dir, batch_size=32, shuffle=False, num_workers=2):
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
 
-def train(exp_dir="logs", model_name="mlp_planner", num_epoch=20, lr=1e-3, batch_size=32, seed=42, **kwargs):
+def train(
+    exp_dir="logs",
+    model_name="mlp_planner",
+    transform_pipeline="state_only",
+    num_epoch=20,
+    lr=1e-3,
+    batch_size=32,
+    seed=42,
+    num_workers=4,
+    **kwargs
+):
+    metric = PlannerMetric()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -40,8 +51,8 @@ def train(exp_dir="logs", model_name="mlp_planner", num_epoch=20, lr=1e-3, batch
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    train_loader = load_data("drive_data/train", batch_size=batch_size, shuffle=True)
-    val_loader = load_data("drive_data/val", batch_size=batch_size)
+    train_loader = load_data("drive_data/train", batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = load_data("drive_data/val", batch_size=batch_size, num_workers=num_workers)
 
     best_error = float("inf")
 
@@ -67,41 +78,43 @@ def train(exp_dir="logs", model_name="mlp_planner", num_epoch=20, lr=1e-3, batch
 
         # Validation
         model.eval()
-        total_lateral_error, total_longitudinal_error = 0.0, 0.0
+        metric.reset()
         with torch.no_grad():
             for batch in val_loader:
                 track_left = batch["track_left"].to(device)
                 track_right = batch["track_right"].to(device)
                 waypoints = batch["waypoints"].to(device)
+                waypoints_mask = batch["waypoints_mask"].to(device)
+
                 predictions = model(track_left, track_right)
+                metric.add(predictions, waypoints, waypoints_mask)
 
-                lateral_error = calculate_lateral_error(predictions, waypoints)
-                longitudinal_error = calculate_longitudinal_error(predictions, waypoints)
+        val_metrics = metric.compute()
+        longitudinal_error = val_metrics["longitudinal_error"]
+        lateral_error = val_metrics["lateral_error"]
 
-                total_lateral_error += lateral_error.item()
-                total_longitudinal_error += longitudinal_error.item()
+        logger.add_scalar("val/longitudinal_error", longitudinal_error, epoch)
+        logger.add_scalar("val/lateral_error", lateral_error, epoch)
 
-        avg_lateral_error = total_lateral_error / len(val_loader)
-        avg_longitudinal_error = total_longitudinal_error / len(val_loader)
+        print(f"Epoch {epoch + 1}/{num_epoch}, Loss: {avg_loss:.4f}, Lateral Error: {lateral_error:.4f}, Longitudinal Error: {longitudinal_error:.4f}")
 
-        logger.add_scalar("val/lateral_error", avg_lateral_error, epoch)
-        logger.add_scalar("val/longitudinal_error", avg_longitudinal_error, epoch)
-
-        print(f"Epoch {epoch + 1}/{num_epoch}, Loss: {avg_loss:.4f}, Lateral Error: {avg_lateral_error:.4f}, Longitudinal Error: {avg_longitudinal_error:.4f}")
-
-        if avg_lateral_error + avg_longitudinal_error < best_error:
-            best_error = avg_lateral_error + avg_longitudinal_error
+        # Save the model if the current error is the best
+        if longitudinal_error + lateral_error < best_error:
+            best_error = longitudinal_error + lateral_error
             save_model(model)
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_dir", default="logs")
     parser.add_argument("--model_name", default="mlp_planner")
+    parser.add_argument("--transform_pipeline", default="state_only")
     parser.add_argument("--num_epoch", type=int, default=20)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--num_workers", type=int, default=4)
     args = parser.parse_args()
     train(**vars(args))
 
