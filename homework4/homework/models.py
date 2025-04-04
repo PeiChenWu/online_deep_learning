@@ -140,6 +140,33 @@ class CNNPlanner(torch.nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN), persistent=False)
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD), persistent=False)
 
+
+       # CNN Backbone
+        self.cnn = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),  # (B, 32, 96, 128)
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),  # (B, 32, 48, 64)
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),  # (B, 64, 48, 64)
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),  # (B, 64, 24, 32)
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),  # (B, 128, 24, 32)
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),  # (B, 128, 12, 16)
+
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),  # (B, 256, 12, 16)
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),  # (B, 256, 6, 8)
+        )
+
+        # Fully connected layers to predict waypoints
+        self.fc = nn.Sequential(
+            nn.Linear(256 * 6 * 8, 512),  # Flattened CNN output
+            nn.ReLU(),
+            nn.Linear(512, n_waypoints * 2),  # Predict n_waypoints * 2
+        )
+
     def forward(self, image: torch.Tensor, **kwargs) -> torch.Tensor:
         """
         Args:
@@ -151,7 +178,24 @@ class CNNPlanner(torch.nn.Module):
         x = image
         x = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
-        raise NotImplementedError
+        #raise NotImplementedError
+        
+        # Normalize the input image
+        x = (image - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
+
+        # Pass through CNN
+        x = self.cnn(x)
+
+        # Flatten the CNN output
+        x = x.view(x.size(0), -1)
+
+        # Pass through fully connected layers
+        x = self.fc(x)
+
+        # Reshape to (B, n_waypoints, 2)
+        waypoints = x.view(-1, self.n_waypoints, 2)
+
+        return waypoints
 
 
 MODEL_FACTORY = {
