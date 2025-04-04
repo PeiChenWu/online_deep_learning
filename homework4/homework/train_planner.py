@@ -20,8 +20,8 @@ from torch.utils.data import DataLoader
 
 from homework.models import load_model, save_model
 from homework.datasets.road_dataset import RoadDataset
-from homework.metrics import calculate_longitudinal_error, calculate_lateral_error
-
+#from homework.metrics import calculate_longitudinal_error, calculate_lateral_error
+from homework.metrics import PlannerMetric
 
 def load_data(split_dir, batch_size=32, shuffle=False, num_workers=2):
     dataset = RoadDataset(split_dir)
