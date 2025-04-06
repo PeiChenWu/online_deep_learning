@@ -83,10 +83,14 @@ class TransformerPlanner(nn.Module):
         num_layers = 2
 
         self.encoder = nn.Linear(2, d_model)  
+        self.positional_encoding = nn.Parameter(torch.randn(1, 2 * n_track, d_model))
+
         #self.transformer = nn.Transformer(d_model, nhead, num_layers, num_layers)
+
         self.transformer_decoder = nn.TransformerDecoder(
             nn.TransformerDecoderLayer(d_model, nhead), num_layers
         )
+
         self.fc_out = nn.Linear(d_model, 2)
 
     def forward(
@@ -116,6 +120,8 @@ class TransformerPlanner(nn.Module):
 
         # Encode the track points
         track = self.encoder(track)  # shape (b, 2 * n_track, d_model)
+
+        track = track + self.positional_encoding
 
         # Create waypoint queries
         #query = self.query_embed.weight.unsqueeze(1).repeat(1, b, 1)  # shape (n_waypoints, b, d_model)
