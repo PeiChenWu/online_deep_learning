@@ -69,7 +69,14 @@ def train(
 
             optimizer.zero_grad()
             predictions = model(track_left, track_right)
-            loss = criterion(predictions, waypoints)
+            
+            #loss = criterion(predictions, waypoints)
+
+            lateral_loss = torch.nn.MSELoss()(predictions[..., 0], waypoints[..., 0])
+            longitudinal_loss = torch.nn.MSELoss()(predictions[..., 1], waypoints[..., 1])
+            loss = 2 * lateral_loss + longitudinal_loss
+
+
             loss.backward()
             optimizer.step()
 
