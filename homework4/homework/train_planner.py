@@ -49,12 +49,10 @@ def train(
 
     model = load_model(model_name, **kwargs).to(device)
     criterion = torch.nn.MSELoss()
-    #optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = load_data("drive_data/val", "default", batch_size=batch_size, num_workers=num_workers)
-
 
     best_error = float("inf")
 
@@ -63,23 +61,23 @@ def train(
         total_loss = 0.0
 
         for batch in train_loader:
-            track_left = batch["track_left"].to(device)
-            track_right = batch["track_right"].to(device)
+            optimizer.zero_grad()
             waypoints = batch["waypoints"].to(device)
 
-            optimizer.zero_grad()
-            predictions = model(track_left, track_right)
-            
-            #loss = criterion(predictions, waypoints)
+            if model_name == "cnn_planner":
+                image = batch["image"].to(device)
+                predictions = model(image)
+            else:
+                track_left = batch["track_left"].to(device)
+                track_right = batch["track_right"].to(device)
+                predictions = model(track_left, track_right)
 
-            lateral_loss = torch.nn.MSELoss()(predictions[..., 0], waypoints[..., 0])
-            longitudinal_loss = torch.nn.MSELoss()(predictions[..., 1], waypoints[..., 1])
+            lateral_loss = criterion(predictions[..., 0], waypoints[..., 0])
+            longitudinal_loss = criterion(predictions[..., 1], waypoints[..., 1])
             loss = 2 * lateral_loss + longitudinal_loss
-
 
             loss.backward()
             optimizer.step()
-
             total_loss += loss.item()
 
         avg_loss = total_loss / len(train_loader)
@@ -90,12 +88,17 @@ def train(
         metric.reset()
         with torch.no_grad():
             for batch in val_loader:
-                track_left = batch["track_left"].to(device)
-                track_right = batch["track_right"].to(device)
                 waypoints = batch["waypoints"].to(device)
                 waypoints_mask = batch["waypoints_mask"].to(device)
 
-                predictions = model(track_left, track_right)
+                if model_name == "cnn_planner":
+                    image = batch["image"].to(device)
+                    predictions = model(image)
+                else:
+                    track_left = batch["track_left"].to(device)
+                    track_right = batch["track_right"].to(device)
+                    predictions = model(track_left, track_right)
+
                 metric.add(predictions, waypoints, waypoints_mask)
 
         val_metrics = metric.compute()
@@ -107,11 +110,9 @@ def train(
 
         print(f"Epoch {epoch + 1}/{num_epoch}, Loss: {avg_loss:.4f}, Lateral Error: {lateral_error:.4f}, Longitudinal Error: {longitudinal_error:.4f}")
 
-        # Save the model if the current error is the best
         if longitudinal_error + lateral_error < best_error:
             best_error = longitudinal_error + lateral_error
             save_model(model)
-
 
 
 if __name__ == "__main__":
