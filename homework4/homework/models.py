@@ -145,22 +145,22 @@ class CNNPlanner(torch.nn.Module):
         # Lighter CNN Backbone with Global Average Pooling
         self.cnn = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1),  # (B, 32, 96, 128)
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.MaxPool2d(2),  # (B, 32, 48, 64)
 
             nn.Conv2d(32, 64, kernel_size=3, padding=1),  # (B, 64, 48, 64)
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.MaxPool2d(2),  # (B, 64, 24, 32)
 
             nn.Conv2d(64, 128, kernel_size=3, padding=1),  # (B, 128, 24, 32)
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.AdaptiveAvgPool2d((1, 1)),  # → (B, 128, 1, 1)
         )
 
         self.fc = nn.Sequential(
             nn.Flatten(),               # → (B, 128)
             nn.Linear(128, 64),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(64, n_waypoints * 2),
         )
 
