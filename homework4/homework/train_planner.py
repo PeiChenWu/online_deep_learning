@@ -48,9 +48,10 @@ def train(
     logger = tb.SummaryWriter(log_dir)
 
     model = load_model(model_name, **kwargs).to(device)
+
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
     train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = load_data("drive_data/val", "default", batch_size=batch_size, num_workers=num_workers)
@@ -64,11 +65,12 @@ def train(
         for batch in train_loader:
             optimizer.zero_grad()
             waypoints = batch["waypoints"].to(device)
-            waypoints = waypoints - waypoints[:, :1, :]
+            #waypoints = waypoints - waypoints[:, :1, :]
 
             if model_name == "cnn_planner":
                 image = batch["image"].to(device)
                 predictions = model(image)
+                #predictions = predictions - predictions[:, :1, :]
             else:
                 track_left = batch["track_left"].to(device)
                 track_right = batch["track_right"].to(device)
@@ -77,7 +79,7 @@ def train(
             lateral_loss = criterion(predictions[..., 0], waypoints[..., 0])
             longitudinal_loss = criterion(predictions[..., 1], waypoints[..., 1])
             if model_name == "cnn_planner":
-                loss = 2 * lateral_loss + 5 * longitudinal_loss
+                loss = 1 * lateral_loss + 3 * longitudinal_loss
             elif model_name == "transformer_planner":
                 loss = 4 * lateral_loss + longitudinal_loss
             else:
