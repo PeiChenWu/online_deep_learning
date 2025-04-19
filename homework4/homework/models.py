@@ -70,7 +70,7 @@ class TransformerPlanner(nn.Module):
         self,
         n_track: int = 10,
         n_waypoints: int = 3,
-        d_model: int = 64,
+        d_model: int = 32,
     ):
         super().__init__()
 
@@ -111,7 +111,9 @@ class TransformerPlanner(nn.Module):
         b = track_left.size(0)
 
         centerline = 0.5 * (track_left + track_right)
+        #centerline = centerline - centerline.mean(dim=1, keepdim=True)
         centerline = centerline - centerline.mean(dim=1, keepdim=True)
+        centerline = centerline / (centerline.std(dim=1, keepdim=True) + 1e-6)
 
         memory = self.encoder(centerline) + self.positional_encoding[:, :centerline.shape[1], :]
         memory = memory.permute(1, 0, 2)  # (seq_len, B, d_model)
