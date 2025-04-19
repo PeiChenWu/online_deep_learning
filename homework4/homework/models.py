@@ -142,7 +142,6 @@ class CNNPlanner(torch.nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN), persistent=False)
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD), persistent=False)
 
-        # Lighter CNN Backbone with Global Average Pooling
         self.cnn = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1),
             nn.BatchNorm2d(32),
@@ -162,7 +161,7 @@ class CNNPlanner(torch.nn.Module):
 
         self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(128, 128),   # ← slightly larger layer
+            nn.Linear(128, 128),   
             nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(128, n_waypoints * 2),
         )
