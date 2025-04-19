@@ -77,11 +77,9 @@ class TransformerPlanner(nn.Module):
         self.n_track = n_track
         self.n_waypoints = n_waypoints
 
-        # Use centerline only
         self.encoder = nn.Linear(2, d_model)
         self.positional_encoding = nn.Parameter(torch.randn(1, n_track, d_model))
 
-        # Small decoder
         self.query_embed = nn.Embedding(n_waypoints, d_model)
         self.decoder = nn.TransformerDecoder(
             nn.TransformerDecoderLayer(d_model=d_model, nhead=2, dim_feedforward=64),
@@ -112,18 +110,14 @@ class TransformerPlanner(nn.Module):
 
         b = track_left.size(0)
 
-        # 1. Build and normalize centerline
         centerline = 0.5 * (track_left + track_right)
         centerline = centerline - centerline.mean(dim=1, keepdim=True)
 
-        # 2. Encode + positional
         memory = self.encoder(centerline) + self.positional_encoding[:, :centerline.shape[1], :]
         memory = memory.permute(1, 0, 2)  # (seq_len, B, d_model)
 
-        # 3. Query
         query = self.query_embed.weight.unsqueeze(1).repeat(1, b, 1)  # (n_waypoints, B, d_model)
 
-        # 4. Decode + project
         output = self.decoder(query, memory)
         output = self.fc_out(output).permute(1, 0, 2)  # (B, n_waypoints, 2)
 

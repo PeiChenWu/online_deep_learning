@@ -81,7 +81,7 @@ def train(
             if model_name == "cnn_planner":
                 loss = 1 * lateral_loss + 5  * longitudinal_loss
             elif model_name == "transformer_planner":
-                loss = 5 * lateral_loss + longitudinal_loss
+                loss = 4 * lateral_loss + longitudinal_loss
             else:
                 loss = lateral_loss + longitudinal_loss
 
