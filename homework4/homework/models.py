@@ -161,11 +161,12 @@ class CNNPlanner(torch.nn.Module):
         )
 
         self.fc = nn.Sequential(
-            nn.Flatten(),               # → (B, 128)
-            nn.Linear(128, 64),
+            nn.Flatten(),
+            nn.Linear(128, 128),   # ← slightly larger layer
             nn.LeakyReLU(negative_slope=0.1),
-            nn.Linear(64, n_waypoints * 2),
+            nn.Linear(128, n_waypoints * 2),
         )
+
 
 
     def forward(self, image: torch.Tensor, **kwargs) -> torch.Tensor:
