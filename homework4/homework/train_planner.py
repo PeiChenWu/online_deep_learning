@@ -47,8 +47,8 @@ def train(
     log_dir = Path(exp_dir) / f"{model_name}_{datetime.now().strftime('%m%d_%H%M%S')}"
     logger = tb.SummaryWriter(log_dir)
 
-    model = load_model(model_name, **kwargs).to(device)
-
+    #model = load_model(model_name, **kwargs).to(device)
+    model = load_model(model_name, n_waypoints=3, **kwargs).to(device)
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.7)
