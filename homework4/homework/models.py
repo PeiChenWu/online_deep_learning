@@ -82,7 +82,7 @@ class TransformerPlanner(nn.Module):
 
         self.query_embed = nn.Embedding(n_waypoints, d_model)
         self.decoder = nn.TransformerDecoder(
-            nn.TransformerDecoderLayer(d_model=d_model, nhead=2, dim_feedforward=64),
+            nn.TransformerDecoderLayer(d_model=d_model, nhead=4, dim_feedforward=128, dropout=0.1),
             num_layers=2,
         )
         self.fc_out = nn.Linear(d_model, 2)
@@ -110,10 +110,14 @@ class TransformerPlanner(nn.Module):
 
         b = track_left.size(0)
 
-        centerline = 0.5 * (track_left + track_right)
+        #centerline = 0.5 * (track_left + track_right)
         #centerline = centerline - centerline.mean(dim=1, keepdim=True)
-        centerline = centerline - centerline.mean(dim=1, keepdim=True)
-        centerline = centerline / (centerline.std(dim=1, keepdim=True) + 1e-6)
+        #centerline = centerline / (centerline.std(dim=1, keepdim=True) + 1e-6)
+
+        centerline = 0.5 * (track_left + track_right)
+        batch_mean = centerline.view(centerline.size(0), -1).mean(dim=1, keepdim=True).view(-1, 1, 1)
+        batch_std = centerline.view(centerline.size(0), -1).std(dim=1, keepdim=True).view(-1, 1, 1)
+        centerline = (centerline - batch_mean) / (batch_std + 1e-6)
 
         memory = self.encoder(centerline) + self.positional_encoding[:, :centerline.shape[1], :]
         memory = memory.permute(1, 0, 2)  # (seq_len, B, d_model)
