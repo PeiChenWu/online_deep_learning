@@ -79,7 +79,7 @@ def train(
             lateral_loss = criterion(predictions[..., 0], waypoints[..., 0])
             longitudinal_loss = criterion(predictions[..., 1], waypoints[..., 1])
             if model_name == "cnn_planner":
-                loss = 1 * lateral_loss + 3 * longitudinal_loss
+                loss = 1 * lateral_loss + 2  * longitudinal_loss
             elif model_name == "transformer_planner":
                 loss = 4 * lateral_loss + longitudinal_loss
             else:
