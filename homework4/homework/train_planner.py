@@ -51,7 +51,9 @@ def train(
     model = load_model(model_name, n_waypoints=3, **kwargs).to(device)
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-5)
+
 
     train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = load_data("drive_data/val", "default", batch_size=batch_size, num_workers=num_workers)
@@ -81,7 +83,7 @@ def train(
             if model_name == "cnn_planner":
                 loss = 1 * lateral_loss + 5  * longitudinal_loss
             elif model_name == "transformer_planner":
-                loss = 4 * lateral_loss + longitudinal_loss
+                loss = 5 * lateral_loss + longitudinal_loss
             else:
                 loss = lateral_loss + longitudinal_loss
 
