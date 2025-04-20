@@ -1,32 +1,15 @@
-"""
-Usage:
-    python3 -m homework.train_planner --your_args here
-"""
-
-"""
-Usage:
-    python3 -m homework.train_planner --your_args here
-"""
-
-
 import argparse
 from datetime import datetime
 from pathlib import Path
-
 import numpy as np
 import torch
 import torch.utils.tensorboard as tb
 from torch.utils.data import DataLoader
 
 from homework.models import load_model, save_model
-from homework.datasets.road_dataset import RoadDataset
-from homework.metrics import PlannerMetric
 from homework.datasets.road_dataset import load_data
+from homework.metrics import PlannerMetric
 
-
-#def load_data(split_dir, batch_size=32, shuffle=False, num_workers=2):
-#    dataset = RoadDataset(split_dir)
-#    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
 def train(
     exp_dir="logs",
@@ -37,6 +20,7 @@ def train(
     batch_size=32,
     seed=42,
     num_workers=4,
+    resume_from_checkpoint=False,
     **kwargs
 ):
     metric = PlannerMetric()
@@ -47,13 +31,17 @@ def train(
     log_dir = Path(exp_dir) / f"{model_name}_{datetime.now().strftime('%m%d_%H%M%S')}"
     logger = tb.SummaryWriter(log_dir)
 
-    #model = load_model(model_name, **kwargs).to(device)
     model = load_model(model_name, n_waypoints=3, **kwargs).to(device)
+
+    # ✅ Load manually if requested
+    if resume_from_checkpoint:
+        checkpoint_path = Path(__file__).resolve().parent / f"{model_name}.th"
+        print(f"Resuming from {checkpoint_path}")
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
-    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-5)
-
 
     train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = load_data("drive_data/val", "default", batch_size=batch_size, num_workers=num_workers)
@@ -67,12 +55,10 @@ def train(
         for batch in train_loader:
             optimizer.zero_grad()
             waypoints = batch["waypoints"].to(device)
-            #waypoints = waypoints - waypoints[:, :1, :]
 
             if model_name == "cnn_planner":
                 image = batch["image"].to(device)
                 predictions = model(image)
-                #predictions = predictions - predictions[:, :1, :]
             else:
                 track_left = batch["track_left"].to(device)
                 track_right = batch["track_right"].to(device)
@@ -80,10 +66,11 @@ def train(
 
             lateral_loss = criterion(predictions[..., 0], waypoints[..., 0])
             longitudinal_loss = criterion(predictions[..., 1], waypoints[..., 1])
+
             if model_name == "cnn_planner":
-                loss = 1 * lateral_loss + 5  * longitudinal_loss
+                loss = 1 * lateral_loss + 5 * longitudinal_loss
             elif model_name == "transformer_planner":
-                loss = 4 * lateral_loss + longitudinal_loss
+                loss = 4 * lateral_loss + 1 * longitudinal_loss
             else:
                 loss = lateral_loss + longitudinal_loss
 
@@ -139,6 +126,6 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--resume_from_checkpoint", action="store_true")
     args = parser.parse_args()
     train(**vars(args))
-
