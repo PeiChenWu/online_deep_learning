@@ -82,7 +82,7 @@ class TransformerPlanner(nn.Module):
 
         self.query_embed = nn.Embedding(n_waypoints, d_model)
         self.decoder = nn.TransformerDecoder(
-            nn.TransformerDecoderLayer(d_model=d_model, nhead=4, dim_feedforward=128, dropout=0.1),
+            nn.TransformerDecoderLayer(d_model=d_model, nhead=4, dim_feedforward=256, dropout=0.1),
             num_layers=3,
         )
         self.fc_out = nn.Linear(d_model, 2)
