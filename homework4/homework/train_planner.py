@@ -52,8 +52,12 @@ def train(
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
-    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-7)
-    scheduler = LambdaLR(optimizer, lr_lambda=warmup_cosine_schedule)
+    
+    
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-7)
+    #scheduler = LambdaLR(optimizer, lr_lambda=warmup_cosine_schedule)
+    
+    
     train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = load_data("drive_data/val", "default", batch_size=batch_size, num_workers=num_workers)
 
