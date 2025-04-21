@@ -5,10 +5,20 @@ import numpy as np
 import torch
 import torch.utils.tensorboard as tb
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import LambdaLR
 
 from homework.models import load_model, save_model
 from homework.datasets.road_dataset import load_data
 from homework.metrics import PlannerMetric
+
+
+def warmup_cosine_schedule(epoch):
+    warmup_epochs = 10 
+    if epoch < warmup_epochs:
+        return epoch / warmup_epochs
+    else:
+        progress = (epoch - warmup_epochs) / (num_epoch - warmup_epochs)
+        return 0.5 * (1 + np.cos(np.pi * progress))
 
 
 def train(
@@ -33,7 +43,7 @@ def train(
 
     model = load_model(model_name, n_waypoints=3, **kwargs).to(device)
 
-    # ✅ Load manually if requested
+
     if resume_from_checkpoint:
         checkpoint_path = Path(__file__).resolve().parent / f"{model_name}.th"
         print(f"Resuming from {checkpoint_path}")
@@ -42,8 +52,8 @@ def train(
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-7)
-
+    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-7)
+    scheduler = LambdaLR(optimizer, lr_lambda=warmup_cosine_schedule)
     train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = load_data("drive_data/val", "default", batch_size=batch_size, num_workers=num_workers)
 
