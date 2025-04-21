@@ -49,7 +49,8 @@ def train(
         print(f"Resuming from {checkpoint_path}")
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
-    criterion = torch.nn.MSELoss()
+    #criterion = torch.nn.MSELoss()
+    criterion = torch.nn.L1Loss()  
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
     
@@ -82,12 +83,17 @@ def train(
             lateral_loss = criterion(predictions[..., 0], waypoints[..., 0])
             longitudinal_loss = criterion(predictions[..., 1], waypoints[..., 1])
 
+            l2_penalty = sum((p ** 2).sum() for p in model.parameters() if p.requires_grad)
+
             if model_name == "cnn_planner":
                 loss = 1 * lateral_loss + 5 * longitudinal_loss
             elif model_name == "transformer_planner":
                 loss = 5 * lateral_loss + 1 * longitudinal_loss
             else:
                 loss = lateral_loss + longitudinal_loss
+
+            weight_decay_factor=1e-4
+            loss += weight_decay_factor * l2_penalty
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
