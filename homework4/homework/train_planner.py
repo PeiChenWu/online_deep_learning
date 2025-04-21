@@ -12,15 +12,6 @@ from homework.datasets.road_dataset import load_data
 from homework.metrics import PlannerMetric
 
 
-def warmup_cosine_schedule(epoch):
-    warmup_epochs = 10 
-    if epoch < warmup_epochs:
-        return epoch / warmup_epochs
-    else:
-        progress = (epoch - warmup_epochs) / (num_epoch - warmup_epochs)
-        return 0.5 * (1 + np.cos(np.pi * progress))
-
-
 def train(
     exp_dir="logs",
     model_name="mlp_planner",
@@ -49,14 +40,19 @@ def train(
         print(f"Resuming from {checkpoint_path}")
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 
-    #criterion = torch.nn.MSELoss()
-    criterion = torch.nn.L1Loss()  
+
+    if model_name == "transformer_planner":
+      criterion = torch.nn.L1Loss()  
+    else:
+      criterion = torch.nn.MSELoss()
+
+    #criterion = torch.nn.MSELoss() # works for MLP and CNN
+    #criterion = torch.nn.L1Loss()  
+
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
     
-    
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-7)
-    #scheduler = LambdaLR(optimizer, lr_lambda=warmup_cosine_schedule)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
+    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-7)
     
     
     train_loader = load_data("drive_data/train", "default", batch_size=batch_size, shuffle=True, num_workers=num_workers)

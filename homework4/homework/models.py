@@ -120,7 +120,7 @@ class TransformerPlanner(nn.Module):
         centerline = (centerline - batch_mean) / (batch_std + 1e-6)
 
         memory = self.encoder(centerline) + self.positional_encoding[:, :centerline.shape[1], :]
-        memory = memory.permute(1, 0, 2)  # (seq_len, B, d_model)
+        memory = memory.permute(1, 0, 2)  
 
         query = self.query_embed.weight.unsqueeze(1).repeat(1, b, 1)  # (n_waypoints, B, d_model)
 
