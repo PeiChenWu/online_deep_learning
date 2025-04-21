@@ -50,8 +50,13 @@ def train(
     #criterion = torch.nn.L1Loss()  
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
+
+    if model_name == "transformer_planner":
+      step_size = 10
+    else:
+      step_size = 15
+
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.7)
     #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch, eta_min=1e-7)
     
     
@@ -88,11 +93,16 @@ def train(
             else:
                 loss = lateral_loss + longitudinal_loss
 
-            weight_decay_factor=1e-4
-            loss += weight_decay_factor * l2_penalty
+            
+            if model_name == "transformer_planner":
+              weight_decay_factor=1e-4
+              loss += weight_decay_factor * l2_penalty
 
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+            if model_name == "transformer_planner":
+              torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
             optimizer.step()
             total_loss += loss.item()
 
